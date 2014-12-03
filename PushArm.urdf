@@ -24,7 +24,7 @@
         <inertia ixx="1"  ixy="1"  ixz="1" iyy="1" iyz="1" izz="1" />
     </inertial>
     <visual>
-      <origin xyz="0.4 0 6.6" rpy="0 0 0"/>
+      <origin xyz="0.4 0 0.2" rpy="0 0 0"/>
       <geometry>
         <sphere radius="0.5"/>
       </geometry>
@@ -33,14 +33,6 @@
       </material>
     </visual>
   </link>
-
-  <link name="ball_dummy">
-    <inertial>
-        <mass value="0"/>
-        <inertia ixx="0"  ixy="0"  ixz="0" iyy="0" iyz="0" izz="0" />
-    </inertial>
-  </link>
-
 
   <link name="link_1">
     <inertial>
@@ -131,16 +123,8 @@
   </joint>
 
   <joint name="joint_b" type="prismatic">
-    <axis xyz="0 0 1"/>
-    <parent link="base_link"/>
-    <child link="ball_dummy"/>
-    <origin rpy="0 0 0" xyz="2 0 0"/>    
-    <limit effort="100" velocity="100" lower="-30" upper="30"/>
-  </joint>
-
-  <joint name="joint_b2" type="prismatic">
     <axis xyz="1 0 0"/>
-    <parent link="ball_dummy"/>
+    <parent link="base_link"/>
     <child link="ball"/>
     <origin rpy="0 0 0" xyz="2 0 0"/>    
     <limit effort="100" velocity="100" lower="-30" upper="30"/>
