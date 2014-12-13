@@ -1,0 +1,45 @@
+function [p,xtraj,utraj,ltraj,ljltraj,z,F,info,traj_opt] = testPushArm(xtraj,utraj,ltraj,ljltraj,scale)
+    options.ignore_self_collisions = false;
+    p = RigidBodyManipulator('PushArm.urdf', options);
+
+    % Goals
+    x0 = zeros(8, 1);
+    xf = zeros(8, 1);
+    xf(2) = -pi/3;
+
+    % Configure traj_opt
+    N = 10; % Number of knot points
+    T_span = 3; % Time of traj
+    T0 = 3;
+    t_init = linspace(0, T0, N);
+    traj_init.x = PPTrajectory(foh(t_init,[linspacevec(x0,xf,N)]));
+    traj_init.u = PPTrajectory(foh(t_init,randn(3,N)));
+
+    to_options.nlcc_mode = 2;
+    to_options.lincc_mode = 1;
+    to_options.compl_slack = .01;
+    to_options.lincompl_slack = .001;
+    to_options.jlcompl_slack = .01;
+    to_options.lambda_mult = p.getMass*9.81*T0/N;
+    to_options.lambda_jl_mult = T0/N;
+
+    traj_opt = ContactImplicitTrajectoryOptimization(p,N,T_span,to_options);
+    traj_opt = traj_opt.addStateConstraint(ConstantConstraint(x0), 1);
+    traj_opt = traj_opt.addStateConstraint(ConstantConstraint(xf), N);
+    traj_opt = traj_opt.addRunningCost(@running_cost_fun);
+    snprint('snopt.out');
+    traj_opt = traj_opt.setSolver('snopt');
+    traj_opt = traj_opt.setSolverOptions('snopt','MajorIterationsLimit',200);
+    traj_opt = traj_opt.setSolverOptions('snopt','MinorIterationsLimit',200000);
+    traj_opt = traj_opt.setSolverOptions('snopt','IterationsLimit',200000);
+    [xtraj,utraj,ltraj,ljltraj,z,F,info] = traj_opt.solveTraj(t_init,traj_init);
+    v = p.constructVisualizer;
+    v.playback(xtraj);
+
+    function [f,df] = running_cost_fun(h,x,u)
+      f = u'*u;
+      % [df/dt df/dx df/du]
+      df = [0 zeros(1,8) 2*u'];
+    end
+end
+
