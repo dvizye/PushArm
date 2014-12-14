@@ -1,6 +1,7 @@
 function [p,xtraj,utraj,ltraj,ljltraj,z,F,info,traj_opt] = testPushArm(xtraj,utraj,ltraj,ljltraj,scale)
-    options.ignore_self_collisions = false;
-    p = RigidBodyManipulator('PushArm.urdf', options);
+    options = struct;
+%     options.ignore_self_collisions = false;
+    p = PlanarRigidBodyManipulator('PushArm.urdf', options);
 
     % Goals
     x0 = zeros(8, 1);
@@ -23,7 +24,7 @@ function [p,xtraj,utraj,ltraj,ljltraj,z,F,info,traj_opt] = testPushArm(xtraj,utr
     to_options.lambda_mult = p.getMass*9.81*T0/N;
     to_options.lambda_jl_mult = T0/N;
 
-    traj_opt = ContactImplicitTrajectoryOptimization(p,N,T_span,to_options);
+    traj_opt = PushArmImplicitTrajectoryOptimization(p,N,T_span,to_options);
     traj_opt = traj_opt.addStateConstraint(ConstantConstraint(x0), 1);
     traj_opt = traj_opt.addStateConstraint(ConstantConstraint(xf), N);
     traj_opt = traj_opt.addRunningCost(@running_cost_fun);
