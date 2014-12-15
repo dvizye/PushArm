@@ -1,12 +1,15 @@
 function [p,xtraj,utraj,ltraj,ljltraj,z,F,info,traj_opt] = testPushArm(xtraj,utraj,ltraj,ljltraj,scale)
     options = struct;
 %     options.ignore_self_collisions = false;
-    p = PlanarRigidBodyManipulator('PushArm.urdf', options);
+    p = RigidBodyManipulator('PushArm.urdf', options);
+
 
     % Goals
     x0 = zeros(8, 1);
-    xf = zeros(8, 1);
-    xf(2) = -pi/3;
+    x0(2) = -pi/3;
+%     xf = zeros(8, 1);
+%     xf(2) = -pi/3;
+    xf = [2.77; 0.698; -0.614; 1.222; 0; 0; 0; 0];
 
     % Configure traj_opt
     N = 10; % Number of knot points
@@ -15,6 +18,9 @@ function [p,xtraj,utraj,ltraj,ljltraj,z,F,info,traj_opt] = testPushArm(xtraj,utr
     t_init = linspace(0, T0, N);
     traj_init.x = PPTrajectory(foh(t_init,[linspacevec(x0,xf,N)]));
     traj_init.u = PPTrajectory(foh(t_init,randn(3,N)));
+    w = warning('off','Drake:RigidBodyManipulator:ReplacedCylinder');
+    
+    warning(w); 
 
     to_options.nlcc_mode = 2;
     to_options.lincc_mode = 1;
@@ -24,7 +30,7 @@ function [p,xtraj,utraj,ltraj,ljltraj,z,F,info,traj_opt] = testPushArm(xtraj,utr
     to_options.lambda_mult = p.getMass*9.81*T0/N;
     to_options.lambda_jl_mult = T0/N;
 
-    traj_opt = PushArmImplicitTrajectoryOptimization(p,N,T_span,to_options);
+    traj_opt = ArmContactTrajectoryOptimization(p,N,T_span,to_options);
     traj_opt = traj_opt.addStateConstraint(ConstantConstraint(x0), 1);
     traj_opt = traj_opt.addStateConstraint(ConstantConstraint(xf), N);
     traj_opt = traj_opt.addRunningCost(@running_cost_fun);
