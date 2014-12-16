@@ -9,10 +9,17 @@ function [p,xtraj,utraj,ltraj,ljltraj,z,F,info,traj_opt] = testPushArm(xtraj,utr
     x0(2) = -pi/3;
 %     xf = zeros(8, 1);
 %     xf(2) = -pi/3;
-    xf = [2.77; 0.698; -0.614; 1.222; 0; 0; 0; 0];
-
+%     xf = [2.77; 0.698; -0.614; 1.222; 0; 0; 0; 0];
+    xf = [    2.540
+              0.7600
+              -0.9800
+              1.4540
+                0
+                0
+                0
+                0];
     % Configure traj_opt
-    N = 10; % Number of knot points
+    N = 5; % Number of knot points
     T_span = 3; % Time of traj
     T0 = 3;
     t_init = linspace(0, T0, N);
@@ -39,6 +46,7 @@ function [p,xtraj,utraj,ltraj,ljltraj,z,F,info,traj_opt] = testPushArm(xtraj,utr
     traj_opt = traj_opt.setSolverOptions('snopt','MajorIterationsLimit',200);
     traj_opt = traj_opt.setSolverOptions('snopt','MinorIterationsLimit',200000);
     traj_opt = traj_opt.setSolverOptions('snopt','IterationsLimit',200000);
+    traj_opt = traj_opt.setCheckGrad(true);
     [xtraj,utraj,ltraj,ljltraj,z,F,info] = traj_opt.solveTraj(t_init,traj_init);
     v = p.constructVisualizer;
     v.playback(xtraj);
