@@ -72,6 +72,8 @@ classdef ArmContactTrajectoryOptimization < DirectTrajectoryOptimization
       cnstr = FunctionHandleConstraint(zeros(nX,1),zeros(nX,1),n_vars,@obj.dynamics_constraint_fun);
       
       [~,~,~,~,~,~,~,mu] = obj.plant.contactConstraints(zeros(nq,1),false,obj.options.active_collision_options);
+      % check if mu = 0
+%       mu = [0];
       
       for i=1:obj.N-1,        
 %         dyn_inds{i} = [obj.h_inds(i);obj.x_inds(:,i);obj.x_inds(:,i+1);obj.u_inds(:,i);obj.l_inds(:,i);obj.ljl_inds(:,i)];
@@ -202,7 +204,7 @@ classdef ArmContactTrajectoryOptimization < DirectTrajectoryOptimization
         v = x(nq+1:nq+nv);
         
         [phi,normal,d,xA,xB,idxA,idxB,mu,n,D,dn,dD] = obj.plant.contactConstraints(q,false,obj.options.active_collision_options);
-        
+%         mu = [0];
         f = zeros(obj.nC*(1+obj.nD),1);
         df = zeros(obj.nC*(1+obj.nD),nq+nv+obj.nC*(2+obj.nD));
         
