@@ -28,7 +28,7 @@ end
 % Input xtraj (i.e. run this after running testPushArm)
 % Output distance between first coordinate and 4 coordinate
 % clear all;
-[p,xtraj,utraj,ltraj,ljltraj,z,F,info,traj_opt] = testPushArm
+[p,xtraj,utraj,ltraj,ljltraj,z,F,info,traj_opt] = testPushArm;
 N = 10;
 phi_knot_points = zeros(1, N);
 phi_ind = 1;
@@ -58,3 +58,16 @@ end
 v = p.constructVisualizer();
 options.slider = true;
 v.playback(xtraj, options);
+%% Test our contactConstraints vs bullet's
+visualize = true;
+options = struct();
+p = RigidBodyManipulator('PushArm.urdf', options);
+if visualize
+    v = p.constructVisualizer();
+    x_i = [1.0654; 0.0867; 0.0073; -5.0561; 0; 0; 0; 0];
+    kinsol = p.doKinematics(x_i(1:4, 1), false, true, x_i(5:8, 1));
+    options.active_collision_options.terrain_only = false;
+    [phi,normal,d,xA,xB,idxA,idxB,mu,n,D,dn,dD] = p.contactConstraints(kinsol,false,options.active_collision_options);
+    [phib,normalb,db,xAb,xBb,idxAb,idxBb,mub,nb,Db,dnb,dDb] = p.contactConstraintsBullet(kinsol,false,options.active_collision_options);
+    v.inspector(x_i);
+end

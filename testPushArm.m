@@ -10,7 +10,7 @@ function [p,xtraj,utraj,ltraj,ljltraj,z,F,info,traj_opt] = testPushArm(xtraj,utr
 %     xf = zeros(8, 1);
 %     xf(2) = -pi/3;
 %     xf = [2.77; 0.698; -0.614; 1.222; 0; 0; 0; 0];
-    xf = [    2.540
+    xf = [    0
               0.7600
               -0.9800
               1.4540
@@ -18,8 +18,12 @@ function [p,xtraj,utraj,ltraj,ljltraj,z,F,info,traj_opt] = testPushArm(xtraj,utr
                 0
                 0
                 0];
+    xf_min = -inf(8, 1);
+    xf_min(1) = 2.5;
+    xf_max = inf(8, 1);
+    xf_max(1) = 2.5;
     % Configure traj_opt
-    N = 5; % Number of knot points
+    N = 3; % Number of knot points
     T_span = 3; % Time of traj
     T0 = 3;
     t_init = linspace(0, T0, N);
@@ -39,10 +43,12 @@ function [p,xtraj,utraj,ltraj,ljltraj,z,F,info,traj_opt] = testPushArm(xtraj,utr
 
     traj_opt = ArmContactTrajectoryOptimization(p,N,T_span,to_options);
     traj_opt = traj_opt.addStateConstraint(ConstantConstraint(x0), 1);
-    traj_opt = traj_opt.addStateConstraint(ConstantConstraint(xf), N);
+%     traj_opt = traj_opt.addStateConstraint(ConstantConstraint(xf), N);
+    traj_opt = traj_opt.addStateConstraint(BoundingBoxConstraint(xf_min,xf_max),N);
     traj_opt = traj_opt.addRunningCost(@running_cost_fun);
     snprint('snopt.out');
     traj_opt = traj_opt.setSolver('snopt');
+    traj_opt = traj_opt.setSolverOptions('snopt','derivativeoption', 0);
     traj_opt = traj_opt.setSolverOptions('snopt','MajorIterationsLimit',200);
     traj_opt = traj_opt.setSolverOptions('snopt','MinorIterationsLimit',200000);
     traj_opt = traj_opt.setSolverOptions('snopt','IterationsLimit',200000);

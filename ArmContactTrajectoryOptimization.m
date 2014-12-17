@@ -11,6 +11,7 @@ classdef ArmContactTrajectoryOptimization < DirectTrajectoryOptimization
     jl_lb_ind  % joint indices where the lower bound is finite
     jl_ub_ind % joint indices where the lower bound is finite
     nJL % number of joint limits = length([jl_lb_ind;jl_ub_ind])
+    bullet % Use bullet or not
   end
   
   properties (Constant)
@@ -72,6 +73,9 @@ classdef ArmContactTrajectoryOptimization < DirectTrajectoryOptimization
       cnstr = FunctionHandleConstraint(zeros(nX,1),zeros(nX,1),n_vars,@obj.dynamics_constraint_fun);
       
       [~,~,~,~,~,~,~,mu] = obj.plant.contactConstraints(zeros(nq,1),false,obj.options.active_collision_options);
+      if obj.bullet
+          [~,~,~,~,~,~,~,mu] = obj.plant.contactConstraintsBullet(zeros(nq,1),false,obj.options.active_collision_options);
+      end
       % check if mu = 0
 %       mu = [0];
       
@@ -193,7 +197,7 @@ classdef ArmContactTrajectoryOptimization < DirectTrajectoryOptimization
       %   lambda_fi /perp gamma + Di*psi(q,v)
       % y = [q;v;gamma]
       % z = [lambda_N;lambda_F1;lambda_f2] (each contact sequentially)
-      function [f,df] = nonlincompl_fun(y)
+      function [f, df] = nonlincompl_fun(y)
         nq = obj.plant.getNumPositions;
         nv = obj.plant.getNumVelocities;
         x = y(1:nq+nv+obj.nC);
@@ -204,6 +208,9 @@ classdef ArmContactTrajectoryOptimization < DirectTrajectoryOptimization
         v = x(nq+1:nq+nv);
         
         [phi,normal,d,xA,xB,idxA,idxB,mu,n,D,dn,dD] = obj.plant.contactConstraints(q,false,obj.options.active_collision_options);
+        if obj.bullet
+            [phi,normal,d,xA,xB,idxA,idxB,mu,n,D,dn,dD] = obj.plant.contactConstraintsBullet(q,false,obj.options.active_collision_options);
+        end
 %         mu = [0];
         f = zeros(obj.nC*(1+obj.nD),1);
         df = zeros(obj.nC*(1+obj.nD),nq+nv+obj.nC*(2+obj.nD));
@@ -273,6 +280,9 @@ classdef ArmContactTrajectoryOptimization < DirectTrajectoryOptimization
         end
         
         [phi,~,~,~,~,~,~,~,n,D,dn,dD] = obj.plant.contactConstraints(q1,false,struct('terrain_only',false));
+        if obj.bullet
+            [phi,~,~,~,~,~,~,~,n,D,dn,dD] = obj.plant.contactConstraintsBullet(q1,false,struct('terrain_only',false));
+        end
         % construct J and dJ from n,D,dn, and dD so they relate to the
         % lambda vector
         J = zeros(nl,nq);
@@ -316,6 +326,9 @@ classdef ArmContactTrajectoryOptimization < DirectTrajectoryOptimization
         
         if nl>0
           [phi,~,~,~,~,~,~,~,n,D,dn,dD] = obj.plant.contactConstraints(q1,false,obj.options.active_collision_options);
+          if obj.bullet
+              [phi,~,~,~,~,~,~,~,n,D,dn,dD] = obj.plant.contactConstraintsBullet(q1,false,obj.options.active_collision_options);
+          end
           % construct J and dJ from n,D,dn, and dD so they relate to the
           % lambda vector
           J = zeros(nl,nq);
@@ -362,7 +375,12 @@ classdef ArmContactTrajectoryOptimization < DirectTrajectoryOptimization
     function obj = setupVariables(obj,N)
       obj = setupVariables@DirectTrajectoryOptimization(obj,N);
       obj.nC = obj.plant.getNumContactPairs;
+      % [dzy] change this
+      obj.bullet = true;
       [~,normal,d] = obj.plant.contactConstraints(zeros(obj.plant.getNumPositions,1));
+      if obj.bullet
+          [~,normal,d] = obj.plant.contactConstraintsBullet(zeros(obj.plant.getNumPositions,1));
+      end
       obj.nD = 2*length(d);
       assert(size(normal,2) == obj.nC); % just a double check
       
