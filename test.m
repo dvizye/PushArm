@@ -18,11 +18,13 @@ lowest_link = p.findLinkInd('link_1', 0, 0);
 visualize = true;
 options = struct();
 p = RigidBodyManipulator('PushArm.urdf', options);
+x0 = zeros(8, 1);
+x0(2) = -pi/3;
 if visualize
     v = p.constructVisualizer();
 %     x0 = [1.0654; 0.0867; 0.0073; -5.0561];
 %     x0 = [1.0654; 0.0867; 0.0073; -5.0561; 0; 0; 0; 0]
-    v.inspector();
+    v.inspector(x0);
 end
 %% Check distance
 % Input xtraj (i.e. run this after running testPushArm)
@@ -71,3 +73,6 @@ if visualize
     [phib,normalb,db,xAb,xBb,idxAb,idxBb,mub,nb,Db,dnb,dDb] = p.contactConstraintsBullet(kinsol,false,options.active_collision_options);
     v.inspector(x_i);
 end
+%% Feed last solution into next traj
+scale = 0.1;
+[p,xtraj,utraj,ltraj,ljltraj,z,F,info,traj_opt] = testPushArm(xtraj,utraj,ltraj,ljltraj,scale);

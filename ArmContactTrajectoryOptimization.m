@@ -70,7 +70,8 @@ classdef ArmContactTrajectoryOptimization < DirectTrajectoryOptimization
       dyn_inds = cell(N-1,1);      
       
       n_vars = 2*nX + nU + 1 + obj.nC*(2+obj.nD) + obj.nJL;
-      cnstr = FunctionHandleConstraint(zeros(nX,1),zeros(nX,1),n_vars,@obj.dynamics_constraint_fun);
+      % [dzy] commented out dynamics constraint
+%       cnstr = FunctionHandleConstraint(zeros(nX,1),zeros(nX,1),n_vars,@obj.dynamics_constraint_fun);
       
       [~,~,~,~,~,~,~,mu] = obj.plant.contactConstraints(zeros(nq,1),false,obj.options.active_collision_options);
       if obj.bullet
@@ -82,9 +83,10 @@ classdef ArmContactTrajectoryOptimization < DirectTrajectoryOptimization
       for i=1:obj.N-1,        
 %         dyn_inds{i} = [obj.h_inds(i);obj.x_inds(:,i);obj.x_inds(:,i+1);obj.u_inds(:,i);obj.l_inds(:,i);obj.ljl_inds(:,i)];
         dyn_inds{i} = {obj.h_inds(i);obj.x_inds(:,i);obj.x_inds(:,i+1);obj.u_inds(:,i);obj.l_inds(:,i);obj.ljl_inds(:,i)};
-        constraints{i} = cnstr;
+        % [dzy] commented out ball constraint
+%         constraints{i} = cnstr;
         
-        obj = obj.addConstraint(constraints{i}, dyn_inds{i});
+%         obj = obj.addConstraint(constraints{i}, dyn_inds{i});
         
         if obj.nC > 0
           % indices for (i) gamma
@@ -110,87 +112,21 @@ classdef ArmContactTrajectoryOptimization < DirectTrajectoryOptimization
             M(k,1 + (k-1)*(1+obj.nD)) = mu(k);
             M(k,(2:obj.nD+1) + (k-1)*(1+obj.nD)) = -ones(obj.nD,1);
           end
-          
-          lincompl_constraints{i} = LinearComplementarityConstraint(W,r,M,obj.options.lincc_mode,obj.options.lincompl_slack);
-          obj = obj.addConstraint(lincompl_constraints{i},[lambda_inds;gamma_inds]);
+            % [dzy relax]
+%           lincompl_constraints{i} = LinearComplementarityConstraint(W,r,M,obj.options.lincc_mode,obj.options.lincompl_slack);
+%           obj = obj.addConstraint(lincompl_constraints{i},[lambda_inds;gamma_inds]);
         end
         
-        if obj.nJL > 0
-          % joint limit linear complementarity constraint
-          % lambda_jl /perp [q - lb_jl; -q + ub_jl]
-          W_jl = zeros(obj.nJL);
-          [r_jl,M_jl] = jointLimitConstraints(obj.plant,zeros(nq,1));
-          jlcompl_constraints{i} = LinearComplementarityConstraint(W_jl,r_jl,M_jl,obj.options.lincc_mode,obj.options.jlcompl_slack);
-          
-          obj = obj.addConstraint(jlcompl_constraints{i},[obj.x_inds(1:nq,i+1);obj.ljl_inds(:,i)]);
-        end
+%         if obj.nJL > 0
+%           % joint limit linear complementarity constraint
+%           % lambda_jl /perp [q - lb_jl; -q + ub_jl]
+%           W_jl = zeros(obj.nJL);
+%           [r_jl,M_jl] = jointLimitConstraints(obj.plant,zeros(nq,1));
+%           jlcompl_constraints{i} = LinearComplementarityConstraint(W_jl,r_jl,M_jl,obj.options.lincc_mode,obj.options.jlcompl_slack);
+%           
+%           obj = obj.addConstraint(jlcompl_constraints{i},[obj.x_inds(1:nq,i+1);obj.ljl_inds(:,i)]);
+%         end
       end
-      
-%       function [f,df] = dynamics_constraint_fun(h,x0,x1,u,lambda,lambda_jl)
-%         nv = obj.plant.getNumVelocities;
-%         nu = obj.plant.getNumInputs;
-%         nl = length(lambda);
-%         njl = length(lambda_jl);
-% 
-%         lambda = lambda*obj.options.lambda_mult;
-%         lambda_jl = lambda_jl*obj.options.lambda_jl_mult;
-%         
-%         assert(nq == nv) % not quite ready for the alternative
-%         
-%         q0 = x0(1:nq);
-%         v0 = x0(nq+1:nq+nv);
-%         q1 = x1(1:nq);
-%         v1 = x1(nq+1:nq+nv);
-%         
-%         [H,C,B,dH,dC,dB] = obj.plant.manipulatorDynamics(q1,v1);
-%         
-%         % q1 = q0 + h*v1
-%         fq = q1 - q0 - h*v1;
-%         dfq = [-v1, -eye(nq), zeros(nq,nv), eye(nq), -h*eye(nq) zeros(nq,nu+nl+njl)];
-% 
-%         if nu>0, 
-%           BuminusC = B*u-C; 
-%           dBuminusC = matGradMult(dB,u) - dC;
-%         else
-%           BuminusC = -C;
-%           dBuminusC = -dC;
-%         end
-%         
-%         % H*v1 = H*v0 + h*(B*u - C) + n^T lambda_N + d^T * lambda_f
-%         fv = H*(v1 - v0) - h*BuminusC;
-%         % [h q0 v0 q1 v1 u l ljl]
-%         dfv = [-BuminusC, zeros(nv,nq), -H, zeros(nv,nq), H, -h*B, zeros(nv,nl+njl)] + ...
-%           [zeros(nv,1+nq+nv) matGradMult(dH,v1-v0)-h*dBuminusC zeros(nv,nu+nl+njl)];
-%         
-%         if nl>0
-%           [phi,~,~,~,~,~,~,~,n,D,dn,dD] = obj.plant.contactConstraints(q1,false,obj.options.active_collision_options);
-%           % construct J and dJ from n,D,dn, and dD so they relate to the
-%           % lambda vector
-%           J = zeros(nl,nq);
-%           J(1:2+obj.nD:end,:) = n;
-%           dJ = zeros(nl*nq,nq);
-%           dJ(1:2+obj.nD:end,:) = dn;
-%           
-%           for j=1:length(D),
-%             J(1+j:2+obj.nD:end,:) = D{j};
-%             dJ(1+j:2+obj.nD:end,:) = dD{j};
-%           end
-% 
-%           fv = fv - J'*lambda;
-%           dfv(:,2+nq+nv:1+2*nq+nv) = dfv(:,2+nq+nv:1+2*nq+nv) - matGradMult(dJ,lambda,true);
-%           dfv(:,2+2*nq+2*nv+nu:1+2*nq+2*nv+nu+nl) = -J'*obj.options.lambda_mult;
-%         end
-%         
-%         if njl>0
-%           [~,J_jl] = jointLimitConstraints(obj.plant,q1);
-%           
-%           fv = fv - J_jl'*lambda_jl;
-%           dfv(:,2+2*nq+2*nv+nu+nl:1+2*nq+2*nv+nu+nl+njl) = -J_jl'*obj.options.lambda_jl_mult;
-%         end
-%         
-%         f = [fq;fv];
-%         df = [dfq;dfv];
-%       end
       
       % nonlinear complementarity constraints:
       %   lambda_N /perp phi(q)
